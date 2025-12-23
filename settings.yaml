@@ -1,0 +1,52 @@
+# System Configuration
+system:
+  fps_target: 15
+  gpu_id: 0
+
+# System Settings
+# System Settings
+system:
+  device_id: "HUB-01"
+  central_server: "http://localhost:8000" # HQ Server URL (leave empty to disable)
+
+# Cameras Configuration
+cameras:
+  - id: "cam_01"
+    name: "Main Entrance"
+    source: 0  # Webcam
+    active: true
+    gps:
+      lat: 12.9716
+      lng: 77.5946
+  
+  # Example Network Camera (WiFi/Ethernet via RTSP)
+  # - id: "cam_02"
+  #   name: "Back Alley"
+  #   source: "rtsp://admin:password@192.168.1.100:554/stream"
+  #   active: false
+  #   gps:
+    #   lat: 12.9720
+    #   lng: 77.5950
+
+# Detection & Recognition
+detection:
+  model_name: "buffalo_l"  # InsightFace model
+  ctx_id: 0  # GPU ID
+  det_thresh: 0.5
+
+recognition:
+  similarity_threshold: 0.30
+  unknown_label: "Unknown"
+
+# Inpainting
+inpainting:
+  enable: false
+  model_path: "models/inpainting/deepfillv2.onnx"
+  mask_threshold: 0.5  # Threshold to decide if occlusion exists
+
+# Database
+database:
+  uri: "./milvus_demo_local.json"
+  collection_name: "criminals"
+  dim: 512
+  metric_type: "COSINE"

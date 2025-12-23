@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Project Specific
+models/
+milvus_demo_local.json
+detection_history.json
+lfw_data/
+lfw_funneled/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp

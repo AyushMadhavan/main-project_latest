@@ -1,0 +1,7 @@
+opencv-python>=4.8.0
+numpy>=1.24.0
+onnxruntime-gpu>=1.16.0
+insightface>=0.7.3
+PyYAML>=6.0
+scikit-image>=0.21.0
+filterpy>=1.4.5  # For SORT tracker if needed
