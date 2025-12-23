@@ -16,8 +16,8 @@ cameras:
     source: 0  # Webcam
     active: true
     gps:
-      lat: 12.9716
-      lng: 77.5946
+      lat: 19.8776
+      lng: 75.3423 # Aurangabad
   
   # Secure Network Camera Example
   # - id: "cam_02"
@@ -26,8 +26,8 @@ cameras:
   #   source: "${CAM_02_URL}" 
   #   active: false
   #   gps:
-    #   lat: 12.9720
-    #   lng: 77.5950
+    #   lat: 19.8776
+    #   lng: 75.3423 # Aurangabad
 
 # Detection & Recognition
 detection:

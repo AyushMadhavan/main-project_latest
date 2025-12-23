@@ -53,10 +53,9 @@ def update_frame(frame):
     with buffer_lock:
         frame_buffer = frame.copy()
 
-def update_logs(name, score, location="Unknown"):
+def update_logs(name, score, location="Unknown", gps=None):
     """Add a new log entry and update analytics."""
     timestamp = time.time()
-    print(f"[DEBUG] Dashboard received log: {name} at {location}")
     
     # 1. Update Live Log Buffer
     with logs_lock:
@@ -75,6 +74,9 @@ def update_logs(name, score, location="Unknown"):
         if name != "Unknown":
             analytics_data["top_criminals"][name] = analytics_data["top_criminals"].get(name, 0) + 1
             
+            # Use specific camera GPS or fallback to system GPS
+            final_gps = gps if gps else system_config.get("gps", {"lat": 0, "lng": 0})
+
             # Persist for tracking
             entry = {
                 "timestamp": timestamp,
@@ -82,7 +84,7 @@ def update_logs(name, score, location="Unknown"):
                 "score": float(score),
                 "location": location,
                 "device_id": system_config.get("device_id", "Unknown"),
-                "gps": system_config.get("gps", {"lat": 0, "lng": 0})
+                "gps": final_gps
             }
             save_history_entry(entry)
             

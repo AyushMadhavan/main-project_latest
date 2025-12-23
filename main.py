@@ -36,11 +36,48 @@ def load_config(path: str = "settings.yaml") -> Dict:
     
     return yaml.safe_load(expanded_content)
 
+import requests
+import json
+
+def get_live_location():
+    """Detect IP-based location with failover."""
+    providers = [
+        ("http://ip-api.com/json", lambda d: (d['lat'], d['lon'], d.get('city', 'Unknown'))),
+        ("https://ipinfo.io/json", lambda d: (float(d['loc'].split(',')[0]), float(d['loc'].split(',')[1]), d.get('city', 'Unknown'))),
+        ("https://ipapi.co/json/", lambda d: (float(d['latitude']), float(d['longitude']), d.get('city', 'Unknown')))
+    ]
+
+    for url, parser in providers:
+        try:
+            logger.info(f"Detecting location via {url}...")
+            response = requests.get(url, timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                lat, lng, city = parser(data)
+                logger.info(f"Location detected: {city} ({lat}, {lng})")
+                return {'lat': lat, 'lng': lng, 'city': city}
+        except Exception as e:
+            logger.warning(f"Location fetch failed for {url}: {e}")
+            
+    return None
+
 def main():
     config = load_config()
     
-    # 1. Initialize Components
-    logger.info("Initializing components...")
+    # 0. Auto-Detect Location (if enabled or default)
+    # Ideally we'd have a config flag, but user requested "automatically detect"
+    detected_gps = get_live_location()
+    
+    if detected_gps:
+        # Update system-wide GPS
+        config.setdefault('system', {})
+        config['system']['gps'] = detected_gps
+        
+        # Update Camera Defaults (if they don't have override or are local)
+        # We assume local cameras (source 0/1) move with the device
+        for cam in config.get('cameras', []):
+            if isinstance(cam.get('source'), int): # Local webcam
+                 cam['gps'] = detected_gps
     
     # Dashboard
     start_dashboard(config=config.get('system', {}), port=5000)
@@ -185,8 +222,9 @@ def main():
                                 local_identities[track_id] = {'name': name, 'score': score}
                                 
                             # Log (with location info!)
-                            print(f"[DEBUG] Main calling update_logs for {name} ({score})")
-                            update_logs(name, score, location=cam_conf.get('name', cid))
+                            update_logs(name, score, 
+                                      location=cam_conf.get('name', cid),
+                                      gps=cam_conf.get('gps'))
 
                         # Visualization
                         color = (0, 255, 0) if name != config['recognition']['unknown_label'] else (0, 0, 255)
