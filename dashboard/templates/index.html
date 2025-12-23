@@ -333,7 +333,7 @@
         }
 
         function fetchLogs() {
-            fetch('/api/logs')
+            fetch('/api/logs?t=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById('logs-container');

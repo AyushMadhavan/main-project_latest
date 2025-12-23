@@ -7,7 +7,7 @@ system:
 # System Settings
 system:
   device_id: "HUB-01"
-  central_server: "http://localhost:8000" # HQ Server URL (leave empty to disable)
+  central_server: "https://fsce-recog-surv-sys.onrender.com" # HQ Server URL (leave empty to disable)
 
 # Cameras Configuration
 cameras:

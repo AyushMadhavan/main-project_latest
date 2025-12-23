@@ -3,6 +3,10 @@ import cv2
 import threading
 import logging
 import time
+import json
+import os
+import requests
+import numpy as np
 from collections import deque
 
 logger = logging.getLogger("Dashboard")
@@ -16,22 +20,6 @@ buffer_lock = threading.Lock()
 logs_buffer = deque(maxlen=50)
 logs_lock = threading.Lock()
 
-def update_frame(frame):
-    """Update the frame to be served."""
-    global frame_buffer
-    with buffer_lock:
-        frame_buffer = frame.copy()
-
-def update_logs(name, score, location="Unknown"):
-    """Add a new log entry."""
-    with logs_lock:
-        logs_buffer.appendleft({
-            "timestamp": time.time(),
-            "name": name,
-            "score": float(score),
-            "location": location
-        })
-
 # Analytics state
 HISTORY_FILE = "detection_history.json"
 analytics_data = {
@@ -41,9 +29,6 @@ analytics_data = {
 }
 analytics_lock = threading.Lock()
 system_config = {}
-
-import json
-import os
 
 def load_history():
     if os.path.exists(HISTORY_FILE):
@@ -56,18 +41,24 @@ def load_history():
 
 def save_history_entry(entry):
     """Append a single entry to history file efficiently."""
-    # For a real DB, we'd use SQLite. For demo JSON, we read-append-write or just append line-by-line (NDJSON).
-    # Let's use NDJSON for robustness (New Line Delimited JSON)
-    with open(HISTORY_FILE, 'a') as f:
-        f.write(json.dumps(entry) + "\n")
+    try:
+        with open(HISTORY_FILE, 'a') as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception as e:
+        logger.error(f"Failed to save history: {e}")
 
-import requests
+def update_frame(frame):
+    """Update the frame to be served."""
+    global frame_buffer
+    with buffer_lock:
+        frame_buffer = frame.copy()
 
 def update_logs(name, score, location="Unknown"):
     """Add a new log entry and update analytics."""
     timestamp = time.time()
+    print(f"[DEBUG] Dashboard received log: {name} at {location}")
     
-    # Live Buffer
+    # 1. Update Live Log Buffer
     with logs_lock:
         logs_buffer.appendleft({
             "timestamp": timestamp,
@@ -76,7 +67,7 @@ def update_logs(name, score, location="Unknown"):
             "location": location
         })
     
-    # Update Analytics & Persistence
+    # 2. Update Analytics & Persistence
     with analytics_lock:
         analytics_data["total_detections"] += 1
         
@@ -115,14 +106,18 @@ def get_trail(name):
     """Get the movement history of a specific person."""
     trail = []
     if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, 'r') as f:
-            for line in f:
-                try:
-                    entry = json.loads(line)
-                    if entry['name'] == name:
-                        trail.append(entry)
-                except:
-                    pass
+        try:
+            with open(HISTORY_FILE, 'r') as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line)
+                        if entry['name'] == name:
+                            trail.append(entry)
+                    except:
+                        pass
+        except Exception:
+            pass
+            
     # Sort by time
     trail.sort(key=lambda x: x['timestamp'])
     return jsonify(trail)
@@ -130,18 +125,28 @@ def get_trail(name):
 def generate():
     """Video streaming generator function."""
     while True:
-        with buffer_lock:
-            if frame_buffer is None:
-                time.sleep(0.01)
-                continue
+        try:
+            with buffer_lock:
+                if frame_buffer is None:
+                    # Create a waiting placeholder
+                    placeholder = np.zeros((480, 640, 3), dtype=np.uint8)
+                    cv2.putText(placeholder, "Waiting for Camera...", (180, 240), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                    (flag, encodedImage) = cv2.imencode(".jpg", placeholder)
+                else:
+                    # Encode frame
+                    (flag, encodedImage) = cv2.imencode(".jpg", frame_buffer)
+                
+                if not flag:
+                    continue
             
-            # Encode frame
-            (flag, encodedImage) = cv2.imencode(".jpg", frame_buffer)
-            if not flag:
-                continue
-        
-        # Yield the output frame in the byte format
-        yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
+            # Yield the output frame in the byte format
+            yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
+            
+            time.sleep(0.04) # Limit to ~25fps to save bandwidth
+        except Exception as e:
+            logger.error(f"Stream generation error: {e}")
+            time.sleep(0.1)
 
 @app.route("/")
 def index():

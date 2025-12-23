@@ -1,4 +1,5 @@
-import multiprocessing as mp
+import threading
+import queue
 import cv2
 import time
 import logging
@@ -25,23 +26,23 @@ class StreamLoader:
         self.height = height
         
         # Shared queue for frames: (frame_id, frame_timestamp, frame_data)
-        self.frame_queue = mp.Queue(maxsize=queue_size)
-        self.running = mp.Value('b', True)
-        self.process: Optional[mp.Process] = None
+        self.frame_queue = queue.Queue(maxsize=queue_size)
+        self.running = False
+        self.thread: Optional[threading.Thread] = None
 
     def start(self):
         """Start the frame ingestion process."""
-        self.running.value = True
-        self.process = mp.Process(target=self._update, args=(self.running, self.frame_queue, self.source, self.width, self.height))
-        self.process.daemon = True
-        self.process.start()
+        self.running = True
+        self.thread = threading.Thread(target=self._update, args=(self.source, self.width, self.height))
+        self.thread.daemon = True
+        self.thread.start()
         logger.info(f"StreamLoader started for source: {self.source}")
 
     def stop(self):
         """Stop the frame ingestion process."""
-        self.running.value = False
-        if self.process:
-            self.process.join()
+        self.running = False
+        if self.thread:
+            self.thread.join()
         logger.info("StreamLoader stopped.")
 
     def read(self) -> Tuple[bool, Optional[float], Optional[object]]:
@@ -58,45 +59,55 @@ class StreamLoader:
             return True, *self.frame_queue.get()
         return False, None, None
 
-    @staticmethod
-    def _update(running, frame_queue, source, width, height):
-        """Internal process loop to fetch frames."""
-        # On Windows, using cv2.CAP_DSHOW can be more stable for webcams
-        if isinstance(source, int) and os.name == 'nt':
-            cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
-        else:
-            cap = cv2.VideoCapture(source)
+    def _update(self, source, width, height):
+        """Internal thread loop to fetch frames."""
+        print(f"[DEBUG] StreamLoader thread started for {source}")
+        
+        def open_cam(src):
+            if isinstance(src, int) and os.name == 'nt':
+                return cv2.VideoCapture(src, cv2.CAP_DSHOW)
+            return cv2.VideoCapture(src)
+
+        cap = open_cam(source)
 
         if not cap.isOpened():
             logger.error(f"Failed to open stream: {source}")
-            running.value = False
+            print(f"[ERROR] Failed to open stream: {source}")
+            self.running = False
             return
-
-        # Set resolution if possible (mostly for webcams, RTSP usually ignores this)
+        
+        # Set resolution
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
-        while running.value:
+        frame_count = 0
+        while self.running:
             ret, frame = cap.read()
             if not ret:
-                logger.warning("Failed to read frame, reconnecting...")
+                print(f"[WARN] Failed read from {source}. Reconnecting...")
                 cap.release()
                 time.sleep(1)
-                cap = cv2.VideoCapture(source)
+                cap = open_cam(source)
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
                 continue
 
             timestamp = time.time()
+            if frame_count % 100 == 0:
+                 pass # Too noisy, silencing for now
+            frame_count += 1
             
             # Non-blocking put with frame dropping behavior
-            if frame_queue.full():
+            if self.frame_queue.full():
                 try:
-                    _ = frame_queue.get_nowait()  # Drop oldest frame
+                    _ = self.frame_queue.get_nowait()  # Drop oldest frame
                 except Exception:
-                    pass  # Queue might have been emptied by consumer simultaneously
-
+                    pass
+            
             try:
-                frame_queue.put((timestamp, frame), block=False)
+                self.frame_queue.put((timestamp, frame), block=False)
             except Exception:
-                pass  # Queue full again, just skip this frame
+                pass
 
         cap.release()
+        print(f"[DEBUG] StreamLoader thread stopped for {source}")

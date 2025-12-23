@@ -52,6 +52,20 @@ def main():
         dim=config['database']['dim']
     )
     
+    # 2. Inpainting & Recognition Models
+    logger.info("Loading models...")
+    inpainter = FaceInpainter(
+        model_path=config['inpainting']['model_path'],
+        mask_threshold=config['inpainting']['mask_threshold']
+    )
+    
+    app = FaceAnalysis(
+        name=config['detection']['model_name'],
+        providers=['CUDAExecutionProvider', 'CPUExecutionProvider'],
+        allowed_modules=['detection', 'recognition', 'landmark_3d_68']
+    )
+    app.prepare(ctx_id=config['detection']['ctx_id'], det_thresh=config['detection']['det_thresh'])
+    
     # 3. Stream & Tracker Initialization (Multi-Camera)
     cameras_config = config.get('cameras', [])
     streams = {}
@@ -92,31 +106,46 @@ def main():
 
     # Thread Pool
     executor = ThreadPoolExecutor(max_workers=4) # Increased for multi-cam
-    
     # State
     fps_counter = 0
     start_time = time.time()
     
+    # Persistent buffer for grid stitching (cid -> processed_frame)
+    # Initialize with black frames
+    grid_buffer = {} 
+    last_frame_time = {}
+    
+    for cid, data in streams.items():
+        blank = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(blank, "Initializing...", (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        grid_buffer[cid] = blank
+        last_frame_time[cid] = time.time()
+
     try:
         while True:
-            frames_to_stitch = []
-            
             # Process each camera
+            any_new_frame = False
+            
             for cid, data in streams.items():
                 loader = data['loader']
                 cam_conf = data['config']
                 
+                # Non-blocking read
                 ret, timestamp, frame = loader.read()
-                if not ret:
-                    # Create black placeholder
-                    frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                    cv2.putText(frame, "No Signal", (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
-                else:
+                
+                if ret:
+                    any_new_frame = True
+                    last_frame_time[cid] = time.time()
+                    
                     # --- Processing Pipeline ---
                     
                     # 1. Detection
-                    faces = app.get(frame)
-                    
+                    try:
+                        faces = app.get(frame)
+                    except Exception as e:
+                        logger.error(f"Detection error: {e}")
+                        faces = []
+
                     # 2. Prepare for Tracker
                     detections = []
                     face_map = {}
@@ -156,6 +185,7 @@ def main():
                                 local_identities[track_id] = {'name': name, 'score': score}
                                 
                             # Log (with location info!)
+                            print(f"[DEBUG] Main calling update_logs for {name} ({score})")
                             update_logs(name, score, location=cam_conf.get('name', cid))
 
                         # Visualization
@@ -169,13 +199,28 @@ def main():
                             for pt in matched_face.landmark_3d_68.astype(int):
                                 cv2.circle(frame, (pt[0], pt[1]), 1, (0, 255, 255), -1)
 
-                # Overlay Camera Name
-                cv2.putText(frame, cam_conf['name'], (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                    # Overlay Camera Name
+                    cv2.putText(frame, cam_conf['name'], (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                    
+                    # Update Buffer
+                    grid_buffer[cid] = cv2.resize(frame, (640, 480))
                 
-                # Resize for Grid (fix to 640x480 for uniformity)
-                frame_resized = cv2.resize(frame, (640, 480))
-                frames_to_stitch.append(frame_resized)
+                else:
+                    # No new frame. Check timeout.
+                    if time.time() - last_frame_time[cid] > 2.0:
+                        # Timeout - Signal Lost
+                        blank = np.zeros((480, 640, 3), dtype=np.uint8)
+                        cv2.putText(blank, cam_conf['name'], (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                        cv2.putText(blank, "Source Input Lost", (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
+                        grid_buffer[cid] = blank
 
+            # Stitch Buffer to Grid
+            if not any_new_frame:
+                time.sleep(0.01) # Avoid spinning if no cameras updated
+                # But we still continue to push the dashboard so it doesn't freeze
+            
+            frames_to_stitch = list(grid_buffer.values())
+            
             # Stitching (Simple logic: linear horizontal, wrapping if > 2)
             # For 2 cams: HConcat. For 4: 2x2.
             count = len(frames_to_stitch)
@@ -194,8 +239,11 @@ def main():
                 final_view = np.vstack(rows)
 
             # 5. Update and FPS
-            update_frame(final_view)
-            
+            if final_view is not None and final_view.size > 0:
+                update_frame(final_view)
+            else:
+                logger.warning("Main Loop: Final view is empty or None")
+
             fps_counter += 1
             if time.time() - start_time > 1.0:
                 logger.info(f"FPS: {fps_counter}")
