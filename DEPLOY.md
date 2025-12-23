@@ -33,3 +33,24 @@ Once deployed, Render will give you a URL (e.g., `https://eagle-eye-hq.onrender.
 3.  Restart `main.py`.
 
 Now, your local detections will be sent securely to the cloud!
+
+## 5. Security (Environment Variables)
+
+### A. Securing Local Cameras
+Never commit passwords to GitHub!
+1.  Create a `.env` file locally (copied from `.env.example`).
+2.  Add your secrets:
+    ```
+    CAM_02_URL=rtsp://admin:secret@192.168.1.55/stream
+    ```
+3.  Use them in `settings.yaml`:
+    ```yaml
+    source: "${CAM_02_URL}"
+    ```
+
+### B. Securing Cloud Server
+If you add API authentication to the HQ server:
+1.  Go to **Render Dashboard** -> **Environment**.
+2.  Add Environment Variables (e.g., `API_KEY`).
+3.  Your code can access them via `os.getenv('API_KEY')`.
+

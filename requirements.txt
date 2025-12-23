@@ -5,3 +5,7 @@ insightface>=0.7.3
 PyYAML>=6.0
 scikit-image>=0.21.0
 filterpy>=1.4.5  # For SORT tracker if needed
+flask>=2.0.0 # For dashboard and HQ server
+gunicorn>=20.0 # For production server
+requests>=2.25.0 # For HTTP requests
+python-dotenv>=1.0.0 # For environment variables

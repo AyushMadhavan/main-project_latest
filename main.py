@@ -20,9 +20,21 @@ from insightface.app import FaceAnalysis
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("Main")
 
+import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
+
 def load_config(path: str = "settings.yaml") -> Dict:
     with open(path, 'r') as f:
-        return yaml.safe_load(f)
+        content = f.read()
+        
+    # Expand environment variables in the YAML content
+    # matches ${VAR} or $VAR
+    expanded_content = os.path.expandvars(content)
+    
+    return yaml.safe_load(expanded_content)
 
 def main():
     config = load_config()

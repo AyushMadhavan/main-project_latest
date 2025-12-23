@@ -19,10 +19,11 @@ cameras:
       lat: 12.9716
       lng: 77.5946
   
-  # Example Network Camera (WiFi/Ethernet via RTSP)
+  # Secure Network Camera Example
   # - id: "cam_02"
   #   name: "Back Alley"
-  #   source: "rtsp://admin:password@192.168.1.100:554/stream"
+  #   # Use ${ENV_VAR} to keep credentials secret (set in .env file)
+  #   source: "${CAM_02_URL}" 
   #   active: false
   #   gps:
     #   lat: 12.9720
