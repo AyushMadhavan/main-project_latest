@@ -124,12 +124,19 @@ class VectorDB:
             name = record.get('name', 'Unknown')
             
             if name not in candidates:
-                candidates[name] = {'max_score': score, 'count': 0, 'sum_score': 0.0, 'id': record.get('id')}
+                candidates[name] = {
+                    'max_score': score, 
+                    'count': 0, 
+                    'sum_score': 0.0, 
+                    'id': record.get('id'),
+                    'record': record # Store full record to access metadata like mesh later
+                }
             
             candidates[name]['count'] += 1
             candidates[name]['sum_score'] += score
             if score > candidates[name]['max_score']:
                 candidates[name]['max_score'] = score
+                candidates[name]['record'] = record # Update record to the best matching one (best mesh?)
 
         if not candidates:
              return []
@@ -151,7 +158,8 @@ class VectorDB:
                 "id": winner['id'],
                 "name": best_name,
                 "score": final_score,
-                "landmark_3d_68": winner.get('landmark_3d_68') # Return stored 3D mesh for comparison
+                "landmark_3d_68": winner['record'].get('landmark_3d_68'), # Return stored 68-point 3D mesh
+                "landmark_3d_468": winner['record'].get('landmark_3d_468') # Return stored 468-point 3D mesh
             })
             
         return matches

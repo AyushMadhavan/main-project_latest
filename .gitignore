@@ -26,3 +26,4 @@ lfw_funneled/
 dist/
 build/
 *.spec
+*.zip

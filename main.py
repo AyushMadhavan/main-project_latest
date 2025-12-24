@@ -24,7 +24,17 @@ import os
 from dotenv import load_dotenv
 
 # Load .env file
+# Load .env file
 load_dotenv()
+
+# MediaPipe FaceMesh (for Forensics)
+import mediapipe as mp
+mp_face_mesh_inst = mp.solutions.face_mesh.FaceMesh(
+    static_image_mode=True,
+    max_num_faces=1,
+    refine_landmarks=True,
+    min_detection_confidence=0.5
+)
 
 def load_config(path: str = "settings.yaml") -> Dict:
     with open(path, 'r') as f:
@@ -343,11 +353,109 @@ def main():
                             if hasattr(matched_face, 'landmark_3d_68') and matched_face.landmark_3d_68 is not None:
                                 mesh_data = matched_face.landmark_3d_68.tolist()
 
+                            # Draw 468-point mesh (MediaPipe)
+                            # Initialize standard mesh if not already done (move to global/outer scope if needed for perf)
+                            # But since this is forensics block only running once per track, local init is fine-ish,
+                            # but better do it outside loop. 
+                            # LIMITATION: Initializing MP FaceMesh is heavy. Should be done at startup.
+                            pass
+
+                            # Forensics Capture (Run once per track if recognized)
+                            capture_paths = {}
+                            if 'forensics_saved' not in local_identities[track_id] and name != config['recognition']['unknown_label']:
+                                try:
+                                    # Ensure directory exists (in case it wasn't there)
+                                    captures_dir = os.path.join("dashboard", "static", "captures")
+                                    os.makedirs(captures_dir, exist_ok=True)
+
+                                    ts_str = f"{int(time.time())}_{track_id}"
+                                    
+                                    # 1. Original Face Crop
+                                    face_crop = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+                                    if face_crop.size > 0:
+                                        orig_name = f"{ts_str}_orig.jpg"
+                                        cv2.imwrite(os.path.join(captures_dir, orig_name), face_crop)
+                                        capture_paths['original'] = f"static/captures/{orig_name}"
+
+                                        # 2. Mesh Visualization
+                                        mesh_viz = face_crop.copy()
+                                        mesh_data_468 = None
+
+                                        try:
+                                            # Run MediaPipe for 468-point dense mesh
+                                            if mp_face_mesh_inst:
+                                                rgb_crop = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
+                                                results_mp = mp_face_mesh_inst.process(rgb_crop)
+                                                
+                                                if results_mp.multi_face_landmarks:
+                                                    h_c, w_c, _ = face_crop.shape
+                                                    raw_lmks = results_mp.multi_face_landmarks[0].landmark
+                                                    mesh_data_468 = [[lm.x * w_c, lm.y * h_c, lm.z * w_c] for lm in raw_lmks]
+                                                    
+                                                    # Draw dense mesh
+                                                    for pt in mesh_data_468:
+                                                        cv2.circle(mesh_viz, (int(pt[0]), int(pt[1])), 1, (0, 255, 255), -1)
+                                                else:
+                                                    # Fallback to 68 points if 468 fails
+                                                    raise ValueError("No MP Mesh found")
+                                        except:
+                                            # Fallback to 68 points (InsightFace)
+                                            if hasattr(matched_face, 'landmark_3d_68') and matched_face.landmark_3d_68 is not None:
+                                                lmks = matched_face.landmark_3d_68.astype(int)
+                                                lmks[:, 0] -= bbox[0]
+                                                lmks[:, 1] -= bbox[1]
+                                                for pt in lmks:
+                                                    cv2.circle(mesh_viz, (pt[0], pt[1]), 1, (0, 255, 255), -1)
+                                        
+                                        mesh_name = f"{ts_str}_mesh.jpg"
+                                        cv2.imwrite(os.path.join(captures_dir, mesh_name), mesh_viz)
+                                        capture_paths['mesh_img'] = f"static/captures/{mesh_name}"
+                                        
+                                        # 3. Enrolled/Reference Mesh (The "Original")
+                                        # matches[0] contains the DB record data we retrieved
+                                        if matches:
+                                            ref_mesh_points = None
+                                            # Prefer 468 points if available
+                                            if 'landmark_3d_468' in matches[0] and matches[0]['landmark_3d_468']:
+                                                 ref_mesh_points = np.array(matches[0]['landmark_3d_468'])
+                                                 logger.info("Using 468-point mesh for reference.")
+                                            elif 'landmark_3d_68' in matches[0] and matches[0]['landmark_3d_68']:
+                                                 ref_mesh_points = np.array(matches[0]['landmark_3d_68'])
+                                            
+                                            if ref_mesh_points is not None:
+                                                # Create a blank canvas for the reference mesh
+                                                ref_viz = np.zeros((200, 200, 3), dtype=np.uint8)
+                                                
+                                                # Simple normalization to fit in 200x200
+                                                if len(ref_mesh_points) > 0:
+                                                    min_xy = np.min(ref_mesh_points, axis=0)
+                                                    max_xy = np.max(ref_mesh_points, axis=0)
+                                                    center = (min_xy + max_xy) / 2
+                                                    scale = 140.0 / (np.max(max_xy - min_xy) + 1e-6) # Leave some padding
+                                                    
+                                                    ref_centered = (ref_mesh_points - center) * scale + [100, 100, 0]
+                                                    
+                                                    for pt in ref_centered.astype(int):
+                                                        cv2.circle(ref_viz, (pt[0], pt[1]), 1, (0, 255, 0), -1)
+                                                    
+                                                cv2.putText(ref_viz, "Enrolled Mesh", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
+
+                                                ref_name = f"{ts_str}_ref_mesh.jpg"
+                                                cv2.imwrite(os.path.join(captures_dir, ref_name), ref_viz)
+                                                capture_paths['ref_mesh'] = f"static/captures/{ref_name}"
+
+                                        local_identities[track_id]['forensics_saved'] = True
+                                        logger.info(f"Saved forensics for {name}")
+
+                                except Exception as e:
+                                    logger.error(f"Forensics capture failed: {e}")
+
                             # Log (with location info!)
                             update_logs(name, score, 
                                       location=cam_conf.get('name', cid),
                                       gps=cam_conf.get('gps'),
-                                      mesh=mesh_data)
+                                      mesh=mesh_data,
+                                      captures=capture_paths)
 
                             # Send to HQ (Async)
                             hq_url = config.get('system', {}).get('central_server')
@@ -359,7 +467,9 @@ def main():
                                     'location': cam_conf.get('name', cid),
                                     'gps': cam_conf.get('gps'),
                                     'device_id': config.get('system', {}).get('device_id', 'Unknown'),
-                                    'mesh': mesh_data
+                                    'mesh': mesh_data,
+                                    'mesh_468': mesh_data_468 if 'mesh_data_468' in locals() else None,
+                                    'captures': capture_paths
                                 }
                                 executor.submit(send_to_hq, hq_url, payload)
 

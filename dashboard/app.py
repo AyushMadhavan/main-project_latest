@@ -53,7 +53,7 @@ def update_frame(frame):
     with buffer_lock:
         frame_buffer = frame.copy()
 
-def update_logs(name, score, location="Unknown", gps=None, mesh=None):
+def update_logs(name, score, location="Unknown", gps=None, mesh=None, captures=None):
     """Add a new log entry and update analytics."""
     timestamp = time.time()
     
@@ -63,7 +63,8 @@ def update_logs(name, score, location="Unknown", gps=None, mesh=None):
             "timestamp": timestamp,
             "name": name,
             "score": float(score),
-            "location": location
+            "location": location,
+            "captures": captures
             # We don't send mesh to live buffer to keep websocket light
         })
     
@@ -86,7 +87,8 @@ def update_logs(name, score, location="Unknown", gps=None, mesh=None):
                 "location": location,
                 "device_id": system_config.get("device_id", "Unknown"),
                 "gps": final_gps,
-                "mesh": mesh # Store 3D structural data for forensics
+                "mesh": mesh, # Store 3D structural data for forensics
+                "captures": captures
             }
             save_history_entry(entry)
             

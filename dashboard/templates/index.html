@@ -352,7 +352,15 @@
                             <div class="log-time">${new Date(log.timestamp * 1000).toLocaleTimeString()} - <span style="color: #cbd5e1">${log.location}</span></div>
                             <div class="log-content">
                                 <span class="log-name">${log.name}</span>
-                                <span class="log-score">${(log.score * 100).toFixed(1)}%</span>
+                                <div style="display:flex; align-items:center; gap:5px;">
+                                    ${log.captures && log.captures.original ?
+                                `<a href="/${log.captures.original}" target="_blank" style="text-decoration:none; background:#334155; padding:2px 5px; border-radius:3px; font-size:0.7em; color:white;">Orig</a>` : ''}
+                                    ${log.captures && log.captures.mesh_img ?
+                                `<a href="/${log.captures.mesh_img}" target="_blank" style="text-decoration:none; background:#334155; padding:2px 5px; border-radius:3px; font-size:0.7em; color:cyan;">Mesh</a>` : ''}
+                                    ${log.captures && log.captures.ref_mesh ?
+                                `<a href="/${log.captures.ref_mesh}" target="_blank" style="text-decoration:none; background:#334155; padding:2px 5px; border-radius:3px; font-size:0.7em; color:#4ade80;">Ref</a>` : ''}
+                                    <span class="log-score">${(log.score * 100).toFixed(1)}%</span>
+                                </div>
                             </div>
                         `;
                         container.appendChild(div);

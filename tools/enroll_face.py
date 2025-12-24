@@ -44,6 +44,16 @@ def main():
     print("Press 'SPACE' to capture a photo.")
     print("Press 'q' to finish and save.")
 
+    # Initialize MediaPipe Face Mesh
+    import mediapipe as mp
+    mp_face_mesh = mp.solutions.face_mesh
+    face_mesh = mp_face_mesh.FaceMesh(
+        static_image_mode=True,
+        max_num_faces=1,
+        refine_landmarks=True,
+        min_detection_confidence=0.5
+    )
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -83,12 +93,30 @@ def main():
             if hasattr(face, 'landmark_3d_68'):
                 landmarks_3d = face.landmark_3d_68
 
+            # Extract 468-point Mesh (MediaPipe)
+            # We crop the face to ensure MediaPipe finds the same face (though max_num_faces=1 helps)
+            # Actually, running on full frame is safer for relative coords if we want robust logic,
+            # but usually cropping with padding is better for small faces.
+            # Let's run on full frame for simplicity since only 1 face is allowed.
+            
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = face_mesh.process(rgb_frame)
+            
+            landmarks_468 = None
+            if results.multi_face_landmarks:
+                # Convert normalized landmarks to pixel coordinates (or keep normalized?)
+                # InsightFace stores pixel coords. Let's store pixel coords for consistency.
+                h, w, c = frame.shape
+                raw_lmks = results.multi_face_landmarks[0].landmark
+                landmarks_468 = [[lm.x * w, lm.y * h, lm.z * w] for lm in raw_lmks] # z is relative to width in MP
+
             # Add to buffer
             record = {
                 "vector": embedding,
                 "name": args.name,
                 "id": len(db.data) + len(new_records) + 1,
-                "landmark_3d_68": landmarks_3d
+                "landmark_3d_68": landmarks_3d,
+                "landmark_3d_468": landmarks_468
             }
             new_records.append(record)
             print(f"Captured image #{len(new_records)} for {args.name}")
