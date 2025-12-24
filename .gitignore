@@ -21,3 +21,8 @@ lfw_funneled/
 .vscode/
 .idea/
 *.swp
+
+# Build Artifacts
+dist/
+build/
+*.spec

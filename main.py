@@ -164,7 +164,21 @@ def send_to_hq(url, data):
         # Log only warnings to avoid spamming console on network issues
         logger.debug(f"Failed to send to HQ: {e}")
 
+    logger.debug(f"Failed to send to HQ: {e}")
+
+# Helper for PyInstaller
+import sys
+
 def main():
+    # Ensure CWD is the application directory
+    if getattr(sys, 'frozen', False):
+        application_path = os.path.dirname(sys.executable)
+    else:
+        application_path = os.path.dirname(os.path.abspath(__file__))
+    
+    os.chdir(application_path)
+    logger.info(f"Running in: {application_path}")
+
     config = load_config()
     
     # 0. Auto-Detect Location (if enabled or default)
