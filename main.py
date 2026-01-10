@@ -392,9 +392,19 @@ def main():
                                                     raw_lmks = results_mp.multi_face_landmarks[0].landmark
                                                     mesh_data_468 = [[lm.x * w_c, lm.y * h_c, lm.z * w_c] for lm in raw_lmks]
                                                     
-                                                    # Draw dense mesh
+                                                    # Draw dense mesh wireframe
+                                                    # 1. Draw connections (Wireframe) - DISABLED as per user request
+                                                    # mp_mesh = mp.solutions.face_mesh
+                                                    # for connection in mp_mesh.FACEMESH_TESSELATION:
+                                                    #     start_idx = connection[0]
+                                                    #     end_idx = connection[1]
+                                                    #     pt1 = (int(mesh_data_468[start_idx][0]), int(mesh_data_468[start_idx][1]))
+                                                    #     pt2 = (int(mesh_data_468[end_idx][0]), int(mesh_data_468[end_idx][1]))
+                                                    #     cv2.line(mesh_viz, pt1, pt2, (0, 255, 255), 1, cv2.LINE_AA)
+
+                                                    # 2. Draw vertices (Points)
                                                     for pt in mesh_data_468:
-                                                        cv2.circle(mesh_viz, (int(pt[0]), int(pt[1])), 1, (0, 255, 255), -1)
+                                                        cv2.circle(mesh_viz, (int(pt[0]), int(pt[1])), 1, (0, 165, 255), -1) # Orange-ish for vertices
                                                 else:
                                                     # Fallback to 68 points if 468 fails
                                                     raise ValueError("No MP Mesh found")
@@ -405,7 +415,7 @@ def main():
                                                 lmks[:, 0] -= bbox[0]
                                                 lmks[:, 1] -= bbox[1]
                                                 for pt in lmks:
-                                                    cv2.circle(mesh_viz, (pt[0], pt[1]), 1, (0, 255, 255), -1)
+                                                    cv2.circle(mesh_viz, (pt[0], pt[1]), 2, (0, 255, 255), -1)
                                         
                                         mesh_name = f"{ts_str}_mesh.jpg"
                                         cv2.imwrite(os.path.join(captures_dir, mesh_name), mesh_viz)
@@ -417,21 +427,80 @@ def main():
                                         
                                         # Fallback to 68 points if 468 missing
                                         if not obj_points and hasattr(matched_face, 'landmark_3d_68') and matched_face.landmark_3d_68 is not None:
-                                             # Convert 68 points relative to crop
-                                             lmks_obj = matched_face.landmark_3d_68.copy()
-                                             lmks_obj[:, 0] -= bbox[0]
-                                             lmks_obj[:, 1] -= bbox[1]
-                                             obj_points = lmks_obj.tolist()
+                                                # Convert 68 points relative to crop
+                                                lmks_obj = matched_face.landmark_3d_68.copy()
+                                                lmks_obj[:, 0] -= bbox[0]
+                                                lmks_obj[:, 1] -= bbox[1]
+                                                obj_points = lmks_obj.tolist()
                                         
                                         if obj_points:
                                             obj_name = f"{ts_str}_mesh.obj"
                                             with open(os.path.join(captures_dir, obj_name), 'w') as f:
                                                 f.write(f"# Face Mesh {len(obj_points)} points - {name}\n")
-                                                for v in obj_points:
-                                                    # Invert Y for standard 3D viewers (Height - Y)
-                                                    f.write(f"v {v[0]:.4f} {face_crop.shape[0] - v[1]:.4f} {v[2]:.4f}\n")
+                                                
+                                                # Normalize/Center the mesh for 3D Viewers
+                                                # 1. Find Centroid
+                                                pts_np = np.array(obj_points)
+                                                centroid = np.mean(pts_np, axis=0)
+                                                
+                                                # 2. Centered Points & Scale to Unit Box [-1, 1]
+                                                centered_pts = pts_np - centroid
+                                                max_dist = np.max(np.abs(centered_pts))
+                                                if max_dist > 0:
+                                                    centered_pts /= max_dist
+                                                
+                                                # Write Geometry (Tetrahedrons) for each point
+                                                # Standard 'p' tags are often ignored by viewers like Windows 3D Viewer.
+                                                # We must create actual faces (geometry) to be visible.
+                                                f.write(f"# Face Mesh Points as Geometry\n")
+                                                
+                                                # Size of the dot relative to the face (0.01 = 1%)
+                                                s = 0.007 
+                                                
+                                                # Global vertex index counter (OBJ is 1-based)
+                                                v_idx = 1
+                                                
+                                                for p in centered_pts:
+                                                    x, y, z = p[0], -p[1], p[2] # Flip Y for 3D viewers
+                                                    
+                                                    # Define 4 vertices of a Tetrahedron
+                                                    # v1 (Top)
+                                                    f.write(f"v {x:.6f} {y+s:.6f} {z:.6f}\n")
+                                                    # v2 (Base Right)
+                                                    f.write(f"v {x+s:.6f} {y-s:.6f} {z+s:.6f}\n")
+                                                    # v3 (Base Left)
+                                                    f.write(f"v {x-s:.6f} {y-s:.6f} {z+s:.6f}\n")
+                                                    # v4 (Base Back)
+                                                    f.write(f"v {x:.6f} {y-s:.6f} {z-s:.6f}\n")
+                                                    
+                                                    # Faces (4 triangles)
+                                                    # f v1 v2 v3
+                                                    f.write(f"f {v_idx} {v_idx+1} {v_idx+2}\n")
+                                                    f.write(f"f {v_idx} {v_idx+2} {v_idx+3}\n")
+                                                    f.write(f"f {v_idx} {v_idx+1} {v_idx+3}\n")
+                                                    f.write(f"f {v_idx+1} {v_idx+2} {v_idx+3}\n")
+                                                    
+                                                    v_idx += 4
+                                                
+                                                # Removed 'p' tag logic since we now use 'f' (faces)
+                                            
                                             capture_paths['mesh_obj'] = f"static/captures/{obj_name}"
                                         
+                                            # Save as JSON (Human Readable)
+                                            json_name = f"{ts_str}_mesh.json"
+                                            json_data = {
+                                                "timestamp": time.time(),
+                                                "person": name,
+                                                "points_count": len(obj_points),
+                                                "landmarks": [
+                                                    {"id": i, "x": float(v[0]), "y": float(v[1]), "z": float(v[2])}
+                                                    for i, v in enumerate(obj_points)
+                                                ]
+                                            }
+                                            with open(os.path.join(captures_dir, json_name), 'w') as f:
+                                                json.dump(json_data, f, indent=2)
+                                            capture_paths['mesh_json'] = f"static/captures/{json_name}"
+
                                         # 3. Enrolled/Reference Mesh (The "Original")
                                         # matches[0] contains the DB record data we retrieved
                                         if matches:
