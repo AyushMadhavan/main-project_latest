@@ -347,6 +347,9 @@ def main():
                                 name = matches[0]['name']
                                 score = matches[0]['score']
                                 local_identities[track_id] = {'name': name, 'score': score}
+                            
+                            if track_id not in local_identities:
+                                local_identities[track_id] = {'name': name, 'score': score}
                                 
                             # Extract 3D Mesh for forensics (if available)
                             mesh_data = None
