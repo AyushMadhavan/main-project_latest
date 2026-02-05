@@ -218,10 +218,15 @@ def main():
     
     # 2. Inpainting & Recognition Models
     logger.info("Loading models...")
-    inpainter = FaceInpainter(
-        model_path=config['inpainting']['model_path'],
-        mask_threshold=config['inpainting']['mask_threshold']
-    )
+    inpainter = None
+    if config['inpainting']['enabled']:
+        logger.info("Loading Inpainting model...")
+        inpainter = FaceInpainter(
+            model_path=config['inpainting']['model_path'],
+            mask_threshold=config['inpainting']['mask_threshold']
+        )
+    else:
+        logger.info("Inpainting disabled.")
     
     app = FaceAnalysis(
         name=config['detection']['model_name'],

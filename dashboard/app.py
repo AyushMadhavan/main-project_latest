@@ -1,4 +1,4 @@
-from flask import Flask, Response, render_template, jsonify
+from flask import Flask, Response, render_template, jsonify, request, redirect, url_for, session
 import cv2
 import threading
 import logging
@@ -8,9 +8,36 @@ import os
 import requests
 import numpy as np
 from collections import deque
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from functools import wraps
 
 logger = logging.getLogger("Dashboard")
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Flask-Login setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Simple User class (will be replaced with PostgreSQL later)
+class User(UserMixin):
+    def __init__(self, id, username):
+        self.id = id
+        self.username = username
+
+# Temporary hardcoded users (will be replaced with PostgreSQL)
+USERS = {
+    'admin': {'id': 1, 'password': 'admin123'},  # Change this!
+    'operator': {'id': 2, 'password': 'operator123'}
+}
+
+@login_manager.user_loader
+def load_user(user_id):
+    for username, data in USERS.items():
+        if str(data['id']) == str(user_id):
+            return User(data['id'], username)
+    return None
 
 # Shared buffer
 frame_buffer = None
@@ -154,9 +181,34 @@ def generate():
             logger.error(f"Stream generation error: {e}")
             time.sleep(0.1)
 
+@app.route("/login", methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username in USERS and USERS[username]['password'] == password:
+            user = User(USERS[username]['id'], username)
+            login_user(user, remember=request.form.get('remember'))
+            return redirect(url_for('index'))
+        else:
+            return redirect(url_for('login', error=1))
+    
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 @app.route("/")
+@login_required
 def index():
-    return render_template("index.html")
+    return render_template("index.html", username=current_user.username)
 
 @app.route('/api/history/<name>')
 def get_history(name):
@@ -190,15 +242,18 @@ def get_history(name):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/video_feed")
+@login_required
 def video_feed():
     return Response(generate(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 @app.route("/api/logs")
+@login_required
 def get_logs():
     with logs_lock:
         return jsonify(list(logs_buffer))
 
 @app.route("/api/analytics")
+@login_required
 def get_analytics():
     with analytics_lock:
         # Sort top criminals
