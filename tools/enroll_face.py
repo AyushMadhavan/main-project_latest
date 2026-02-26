@@ -8,7 +8,7 @@ import time
 # Add src to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database.vector_db import VectorDB
+from backend.database.vector_db import VectorDB
 from insightface.app import FaceAnalysis
 
 def main():

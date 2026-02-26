@@ -10,7 +10,7 @@ from insightface.app import FaceAnalysis
 import sys
 sys.path.append(os.getcwd())
 
-from database.vector_db import VectorDB
+from backend.database.vector_db import VectorDB
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("BulkImport")
