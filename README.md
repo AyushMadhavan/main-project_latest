@@ -96,3 +96,4 @@ To package as a standalone `.exe`:
 python tools/build_exe.py
 ```
 See `PACKAGING.md` for details.
+# main-project_latest
