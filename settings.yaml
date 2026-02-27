@@ -40,7 +40,7 @@ detection:
   det_thresh: 0.5
 
 recognition:
-  similarity_threshold: 0.30
+  similarity_threshold: 0.50
   unknown_label: "Unknown"
 
 # Inpainting
@@ -54,4 +54,18 @@ database:
   uri: "./milvus_demo_local.json"
   collection_name: "criminals"
   dim: 512
-  metric_type: "COSINE"
+  metric_type: "IP"
+
+# Email Alerts
+alerts:
+  enabled: true
+  min_score: 0.6            # Minimum confidence to trigger alert
+  cooldown_seconds: 300     # Wait 5 min before re-alerting for same person
+  email:
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    sender: "ayushmadhavan183@gmail.com"
+    password: "${ALERT_EMAIL_PASSWORD}"  # Set in .env file (Gmail App Password)
+    recipients:
+      - "ayushmadhavan183@gmail.com"
+

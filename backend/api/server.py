@@ -9,6 +9,7 @@ import requests
 from collections import deque
 from flask import Flask, Response, render_template, jsonify, request, redirect, url_for, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from backend.database.auth_db import init_db, get_user_by_id, get_user_by_username, verify_password
 
 logger = logging.getLogger("Dashboard")
 
@@ -26,24 +27,22 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Temporary hardcoded users
-USERS = {
-    'admin': {'id': 1, 'password': 'admin123'},
-    'operator': {'id': 2, 'password': 'operator123'}
-}
+# Initialize SQLite user database
+init_db()
 
 
 class User(UserMixin):
-    def __init__(self, id, username):
+    def __init__(self, id, username, role='operator'):
         self.id = id
         self.username = username
+        self.role = role
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    for username, data in USERS.items():
-        if str(data['id']) == str(user_id):
-            return User(data['id'], username)
+    row = get_user_by_id(user_id)
+    if row:
+        return User(row['id'], row['username'], row['role'])
     return None
 
 
@@ -156,8 +155,10 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        if username in USERS and USERS[username]['password'] == password:
-            login_user(User(USERS[username]['id'], username), remember=request.form.get('remember'))
+        if verify_password(username, password):
+            user_row = get_user_by_username(username)
+            login_user(User(user_row['id'], user_row['username'], user_row['role']),
+                       remember=request.form.get('remember'))
             return redirect(url_for('index'))
         return redirect(url_for('login', error=1))
     return render_template("login.html")
@@ -186,7 +187,9 @@ def video_feed():
 @login_required
 def get_logs():
     with logs_lock:
-        return jsonify(list(logs_buffer))
+        # Filter out unknown/unidentified faces
+        filtered_logs = [log for log in logs_buffer if log.get('name') != 'Unknown']
+        return jsonify(filtered_logs)
 
 
 @app.route("/api/analytics")
@@ -321,13 +324,10 @@ def enroll_verify():
     password = data.get("password", "")
     username = current_user.username
 
-    if username not in USERS:
-        return jsonify({"ok": False, "error": "User not found"}), 403
-
-    if username != "admin":
+    if getattr(current_user, 'role', None) != 'admin':
         return jsonify({"ok": False, "error": "Only admin can enroll faces"}), 403
 
-    if USERS[username]["password"] != password:
+    if not verify_password(username, password):
         return jsonify({"ok": False, "error": "Incorrect password"}), 401
 
     # Set a session flag so the enroll page knows auth passed
@@ -345,6 +345,12 @@ def enroll_submit():
     name = request.form.get("name", "").strip()
     if not name:
         return jsonify({"ok": False, "error": "Name is required"}), 400
+        
+    raw_emails = request.form.get("alert_emails", "").strip()
+    alert_emails = []
+    if raw_emails:
+        # Split by comma, strip whitespace, remove empty, take up to 3
+        alert_emails = [e.strip() for e in raw_emails.split(",") if e.strip()][:3]
 
     files = request.files.getlist("images")
     if not files:
@@ -409,6 +415,9 @@ def enroll_submit():
                 "landmark_3d_68": landmarks_3d,
                 "landmark_3d_468": landmarks_468
             }
+            if alert_emails:
+                record["alert_emails"] = alert_emails
+
             records.append(record)
             results.append({"file": fname, "ok": True})
 
@@ -431,7 +440,177 @@ def enroll_submit():
     })
 
 
-# ── Server start ─────────────────────────────────────────────────────────────
+# ── Forensics Gallery ────────────────────────────────────────────────────────
+
+@app.route("/api/forensics")
+@login_required
+def get_forensics():
+    """Return all detection history entries for the gallery."""
+    entries = []
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r') as f:
+            for line in f:
+                try:
+                    entry = json.loads(line)
+                    entries.append(entry)
+                except json.JSONDecodeError:
+                    pass
+    # Sort newest first
+    entries.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+    return jsonify(entries)
+
+
+@app.route("/api/forensics/captures")
+@login_required
+def get_captures():
+    """Return capture images grouped by person."""
+    captures_dir = os.path.join(_STATIC_FOLDER, "captures")
+    if not os.path.exists(captures_dir):
+        return jsonify({})
+
+    # Read history to map capture files to names
+    person_captures = {}
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r') as f:
+            for line in f:
+                try:
+                    entry = json.loads(line)
+                    name = entry.get('name', 'Unknown')
+                    caps = entry.get('captures', {})
+                    if caps:
+                        person_captures.setdefault(name, []).append({
+                            'timestamp': entry.get('timestamp', 0),
+                            'score': entry.get('score', 0),
+                            'location': entry.get('location', 'Unknown'),
+                            'captures': caps
+                        })
+                except json.JSONDecodeError:
+                    pass
+
+    return jsonify(person_captures)
+
+
+@app.route("/api/forensics/report/<name>")
+@login_required
+def generate_report(name):
+    """Generate a PDF report for a specific person."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from io import BytesIO
+    import datetime
+
+    entries = []
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r') as f:
+            for line in f:
+                try:
+                    entry = json.loads(line)
+                    if entry.get('name') == name:
+                        entries.append(entry)
+                except json.JSONDecodeError:
+                    pass
+
+    entries.sort(key=lambda x: x.get('timestamp', 0))
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
+    styles = getSampleStyleSheet()
+
+    # Custom styles
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Title'],
+                                 fontSize=22, textColor=colors.black, spaceAfter=6*mm)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'],
+                                    fontSize=11, textColor=colors.gray, spaceAfter=10*mm)
+    heading_style = ParagraphStyle('SectionHead', parent=styles['Heading2'],
+                                   fontSize=14, textColor=colors.black, spaceBefore=8*mm, spaceAfter=4*mm)
+    body_style = ParagraphStyle('Body', parent=styles['Normal'],
+                                fontSize=10, textColor=colors.black)
+
+    story = []
+
+    # Header
+    story.append(Paragraph(f"Forensic Report: {name}", title_style))
+    story.append(Paragraph(
+        f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} · "
+        f"Total Detections: {len(entries)} · EagleEye Surveillance System",
+        subtitle_style
+    ))
+
+    # Summary table
+    if entries:
+        story.append(Paragraph("Detection Summary", heading_style))
+
+        first_ts = datetime.datetime.fromtimestamp(entries[0].get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')
+        last_ts = datetime.datetime.fromtimestamp(entries[-1].get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')
+        avg_score = sum(e.get('score', 0) for e in entries) / len(entries) if entries else 0
+        locations = list(set(e.get('location', 'Unknown') for e in entries))
+
+        summary_data = [
+            ['Metric', 'Value'],
+            ['First Seen', first_ts],
+            ['Last Seen', last_ts],
+            ['Total Detections', str(len(entries))],
+            ['Average Confidence', f"{avg_score:.1%}"],
+            ['Locations', ', '.join(locations)],
+        ]
+
+        t = Table(summary_data, colWidths=[50*mm, 100*mm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.black),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(t)
+
+    # Detection timeline
+    story.append(Paragraph("Detection Timeline", heading_style))
+
+    for i, entry in enumerate(entries[:50]):  # Limit to 50 entries
+        ts = datetime.datetime.fromtimestamp(entry.get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')
+        score = entry.get('score', 0)
+        location = entry.get('location', 'Unknown')
+        gps = entry.get('gps', {})
+        gps_str = ""
+        if gps and isinstance(gps, dict):
+            gps_str = f" ({gps.get('lat', 0):.4f}, {gps.get('lng', 0):.4f})"
+
+        story.append(Paragraph(
+            f"<b>#{i+1}</b> · {ts} · <b>{score:.1%}</b> · {location}{gps_str}",
+            body_style
+        ))
+
+        # Try to include face capture image
+        caps = entry.get('captures', {})
+        orig = caps.get('original', '')
+        if orig:
+            img_path = os.path.join(_PROJECT_ROOT, "frontend", orig)
+            if os.path.exists(img_path):
+                try:
+                    img = RLImage(img_path, width=30*mm, height=30*mm)
+                    story.append(img)
+                except Exception:
+                    pass
+
+        story.append(Spacer(1, 3*mm))
+
+    doc.build(story)
+    buffer.seek(0)
+
+    return Response(
+        buffer.read(),
+        mimetype='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename=report_{name}.pdf'}
+    )
+
+
+
 
 def start_dashboard(config=None, host='0.0.0.0', port=5000):
     """Start Flask dashboard in a background daemon thread."""

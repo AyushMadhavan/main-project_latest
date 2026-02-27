@@ -1,38 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EagleEye — Enroll Face</title>
     <style>
         :root {
-            --bg-primary: #0a0e1a;
-            --bg-secondary: #151b2e;
-            --bg-tertiary: #1e2842;
-            --accent-blue: #4f7cff;
-            --accent-blue-hover: #6b8fff;
-            --text-primary: #e8edf5;
-            --text-secondary: #9ca8c2;
-            --text-muted: #6b7a99;
-            --border-color: rgba(255, 255, 255, 0.08);
-            --success: #22c55e;
-            --danger: #ef4444;
-            --warning: #f59e0b;
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #fff;
+            --text-secondary: #999;
+            --text-muted: #555;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --success: #fff;
+            --danger: #999;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             background: var(--bg-primary);
             color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Header */
         header {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
@@ -43,81 +44,136 @@
             flex-shrink: 0;
         }
 
-        .logo-section { display: flex; align-items: center; gap: 12px; }
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
         .logo-icon {
-            width: 32px; height: 32px;
-            background: linear-gradient(135deg, var(--accent-blue), #6366f1);
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px;
+            width: 28px;
+            height: 28px;
         }
 
-        h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.5px; }
-        h1 span { color: var(--accent-blue); }
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            filter: invert(1);
+        }
 
-        .header-actions { display: flex; align-items: center; gap: 16px; }
-        .user-info { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 0.9rem; }
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 500;
+            letter-spacing: -0.5px;
+        }
+
+        h1 span {
+            color: #666;
+            font-weight: 400;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-info {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
 
         .nav-btn {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
-            padding: 8px 16px; border-radius: 6px;
-            cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
             text-decoration: none;
         }
-        .nav-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
 
         /* Auth Gate */
         .auth-gate {
             flex: 1;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .auth-card {
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 40px;
-            width: 420px;
+            width: 400px;
             text-align: center;
         }
 
         .auth-card .lock-icon {
-            font-size: 3rem; margin-bottom: 16px;
+            font-size: 2.5rem;
+            margin-bottom: 16px;
         }
 
-        .auth-card h2 { font-size: 1.3rem; margin-bottom: 8px; }
-        .auth-card p { color: var(--text-muted); margin-bottom: 24px; font-size: 0.9rem; }
+        .auth-card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .auth-card p {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            font-size: 0.85rem;
+        }
 
         .auth-card input {
             width: 100%;
-            padding: 12px 16px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+            padding: 12px 14px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 6px;
             color: var(--text-primary);
             font-size: 1rem;
             margin-bottom: 16px;
             outline: none;
-            transition: border 0.2s;
         }
-        .auth-card input:focus { border-color: var(--accent-blue); }
+
+        .auth-card input:focus {
+            border-color: #555;
+        }
 
         .auth-card .submit-btn {
             width: 100%;
             padding: 12px;
-            background: linear-gradient(135deg, var(--accent-blue), #6366f1);
-            border: none; border-radius: 8px;
-            color: white; font-size: 1rem; font-weight: 600;
-            cursor: pointer; transition: all 0.2s;
+            background: #fff;
+            border: none;
+            border-radius: 6px;
+            color: #000;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
         }
-        .auth-card .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(79,124,255,0.4); }
-        .auth-card .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .auth-card .submit-btn:hover {
+            opacity: 0.85;
+        }
+
+        .auth-card .submit-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
 
         .auth-error {
-            color: var(--danger);
+            color: #999;
             font-size: 0.85rem;
             margin-bottom: 12px;
             display: none;
@@ -131,305 +187,507 @@
             overflow: hidden;
         }
 
-        .enroll-container.active { display: flex; }
+        .enroll-container.active {
+            display: flex;
+        }
 
-        /* Name bar */
         .name-bar {
             padding: 16px 24px;
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
-            display: flex; align-items: center; gap: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
-        .name-bar label { font-weight: 600; font-size: 0.95rem; white-space: nowrap; }
+        .name-bar label {
+            font-weight: 500;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            color: var(--text-secondary);
+        }
 
         .name-bar input {
-            flex: 1; max-width: 400px;
-            padding: 10px 16px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+            flex: 1;
+            max-width: 400px;
+            padding: 10px 14px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 6px;
             color: var(--text-primary);
-            font-size: 1rem;
+            font-size: 0.95rem;
             outline: none;
         }
-        .name-bar input:focus { border-color: var(--accent-blue); }
 
-        /* Tabs */
+        .name-bar input:focus {
+            border-color: #555;
+        }
+
         .mode-tabs {
-            display: flex; gap: 8px;
+            display: flex;
+            gap: 8px;
             padding: 12px 24px;
             background: var(--bg-primary);
         }
 
         .mode-tab {
-            background: transparent; border: none;
+            background: transparent;
+            border: none;
             color: var(--text-secondary);
-            padding: 10px 20px; border-radius: 8px;
-            cursor: pointer; font-size: 0.9rem; font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
             transition: all 0.2s;
         }
-        .mode-tab:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
-        .mode-tab.active { background: var(--accent-blue); color: white; }
 
-        /* Panels */
-        .panel { display: none; flex: 1; overflow: hidden; }
-        .panel.active { display: flex; }
+        .mode-tab:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
 
-        /* Upload Panel */
+        .mode-tab.active {
+            background: #fff;
+            color: #000;
+        }
+
+        .panel {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .panel.active {
+            display: flex;
+        }
+
+        /* Upload */
         .upload-panel {
-            flex: 1; padding: 24px;
-            display: flex; flex-direction: column; gap: 20px;
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
             overflow-y: auto;
         }
 
         .drop-zone {
-            border: 2px dashed rgba(79,124,255,0.4);
-            border-radius: 16px;
+            border: 1px dashed #333;
+            border-radius: 12px;
             padding: 48px;
             text-align: center;
-            transition: all 0.3s;
+            transition: all 0.2s;
             cursor: pointer;
-            background: rgba(79,124,255,0.03);
+            background: rgba(255, 255, 255, 0.02);
         }
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: var(--accent-blue);
-            background: rgba(79,124,255,0.08);
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: #666;
+            background: rgba(255, 255, 255, 0.04);
         }
-        .drop-zone .icon { font-size: 3rem; margin-bottom: 12px; }
-        .drop-zone p { color: var(--text-secondary); margin-bottom: 8px; }
-        .drop-zone small { color: var(--text-muted); font-size: 0.8rem; }
-        .drop-zone input { display: none; }
+
+        .drop-zone .icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .drop-zone p {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .drop-zone small {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .drop-zone input {
+            display: none;
+        }
 
         .preview-grid {
-            display: flex; flex-wrap: wrap; gap: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .preview-item {
-            position: relative; width: 100px; height: 100px;
-            border-radius: 10px; overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
-        .preview-item img { width: 100%; height: 100%; object-fit: cover; }
-        .preview-item .remove-btn {
-            position: absolute; top: 4px; right: 4px;
-            background: rgba(0,0,0,0.7); border: none;
-            color: white; width: 22px; height: 22px;
-            border-radius: 50%; cursor: pointer;
-            font-size: 12px; display: flex;
-            align-items: center; justify-content: center;
+            position: relative;
+            width: 90px;
+            height: 90px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #222;
         }
 
-        /* Camera Panel */
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-item .remove-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Camera */
         .camera-panel {
-            flex: 1; padding: 24px;
-            display: flex; flex-direction: column; gap: 20px;
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
             overflow-y: auto;
         }
 
         .camera-feed-container {
-            display: flex; gap: 20px;
-            flex: 1; min-height: 0;
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
         }
 
         .camera-feed {
             flex: 2;
             background: var(--bg-secondary);
-            border-radius: 12px;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
             overflow: hidden;
             position: relative;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+
         .camera-feed video {
-            max-width: 100%; max-height: 100%;
-            border-radius: 12px;
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
         }
+
         .camera-feed .placeholder {
             color: var(--text-muted);
             text-align: center;
         }
-        .camera-feed .placeholder .icon { font-size: 3rem; margin-bottom: 12px; }
+
+        .camera-feed .placeholder .icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
 
         .camera-captures {
             flex: 1;
             background: var(--bg-secondary);
-            border-radius: 12px;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
             padding: 16px;
-            display: flex; flex-direction: column;
+            display: flex;
+            flex-direction: column;
         }
-        .camera-captures h3 { font-size: 0.95rem; margin-bottom: 12px; color: var(--text-secondary); }
+
+        .camera-captures h3 {
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
         .camera-captures .captures-grid {
-            display: flex; flex-wrap: wrap; gap: 8px;
-            flex: 1; overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1;
+            overflow-y: auto;
         }
 
         .camera-controls {
-            display: flex; gap: 12px; align-items: center;
+            display: flex;
+            gap: 12px;
+            align-items: center;
         }
 
         .cam-btn {
-            padding: 10px 24px; border-radius: 8px;
-            border: none; font-size: 0.9rem; font-weight: 600;
-            cursor: pointer; transition: all 0.2s;
+            padding: 10px 24px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
         }
+
         .cam-btn.primary {
-            background: linear-gradient(135deg, var(--accent-blue), #6366f1);
-            color: white;
+            background: #fff;
+            color: #000;
         }
-        .cam-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(79,124,255,0.4); }
-        .cam-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .cam-btn.primary:hover {
+            opacity: 0.85;
+        }
+
+        .cam-btn.primary:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
         .cam-btn.secondary {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.05);
             color: var(--text-secondary);
             border: 1px solid var(--border-color);
         }
-        .cam-btn.secondary:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); }
 
-        .capture-count { color: var(--text-muted); font-size: 0.85rem; }
+        .cam-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .capture-count {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
 
         /* Submit bar */
         .submit-bar {
             padding: 16px 24px;
             background: var(--bg-secondary);
             border-top: 1px solid var(--border-color);
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .submit-bar .status { color: var(--text-muted); font-size: 0.9rem; }
+        .submit-bar .status {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
 
         .enroll-btn {
-            padding: 12px 32px; border-radius: 8px;
-            background: linear-gradient(135deg, var(--success), #16a34a);
-            border: none; color: white;
-            font-size: 1rem; font-weight: 600;
-            cursor: pointer; transition: all 0.2s;
+            padding: 12px 32px;
+            border-radius: 6px;
+            background: #fff;
+            border: none;
+            color: #000;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
         }
-        .enroll-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(34,197,94,0.4); }
-        .enroll-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .enroll-btn:hover {
+            opacity: 0.85;
+        }
+
+        .enroll-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
 
         /* Results */
         .results-overlay {
-            display: none; position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(4px);
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
             z-index: 1000;
-            align-items: center; justify-content: center;
+            align-items: center;
+            justify-content: center;
         }
-        .results-overlay.show { display: flex; }
+
+        .results-overlay.show {
+            display: flex;
+        }
 
         .results-card {
             background: var(--bg-secondary);
-            border-radius: 16px; border: 1px solid var(--border-color);
-            padding: 32px; width: 500px; max-height: 80vh;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 32px;
+            width: 480px;
+            max-height: 80vh;
             overflow-y: auto;
         }
-        .results-card h2 { margin-bottom: 20px; }
+
+        .results-card h2 {
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
 
         .result-item {
-            display: flex; align-items: center; gap: 12px;
-            padding: 10px 14px; border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 6px;
             background: var(--bg-tertiary);
             margin-bottom: 8px;
         }
-        .result-item .icon { font-size: 1.2rem; }
-        .result-item .filename { flex: 1; font-size: 0.9rem; color: var(--text-secondary); word-break: break-all; }
-        .result-item .error-msg { font-size: 0.8rem; color: var(--danger); }
-        .result-item.success { border-left: 3px solid var(--success); }
-        .result-item.failed { border-left: 3px solid var(--danger); }
+
+        .result-item .icon {
+            font-size: 1.1rem;
+        }
+
+        .result-item .filename {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        .result-item .error-msg {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .result-item.success {
+            border-left: 2px solid #fff;
+        }
+
+        .result-item.failed {
+            border-left: 2px solid #444;
+        }
 
         .results-summary {
-            margin-bottom: 20px; padding: 16px;
-            background: var(--bg-tertiary); border-radius: 10px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
             text-align: center;
         }
-        .results-summary .big-number { font-size: 2.5rem; font-weight: 700; color: var(--success); }
-        .results-summary .label { color: var(--text-muted); font-size: 0.9rem; }
+
+        .results-summary .big-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .results-summary .label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
 
         .close-results {
-            margin-top: 16px; width: 100%;
-            padding: 12px; border-radius: 8px; border: none;
-            background: var(--accent-blue); color: white;
-            font-size: 1rem; font-weight: 600; cursor: pointer;
+            margin-top: 16px;
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: none;
+            background: #fff;
+            color: #000;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-primary); }
-        ::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 3px; }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
 
-        /* Loading spinner */
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 2px;
+        }
+
         .spinner {
-            display: inline-block; width: 20px; height: 20px;
-            border: 2px solid rgba(255,255,255,0.2);
-            border-top-color: white;
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-top-color: #000;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            margin-right: 8px; vertical-align: middle;
+            margin-right: 8px;
+            vertical-align: middle;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
-        canvas#hidden-canvas { display: none; }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        canvas#hidden-canvas {
+            display: none;
+        }
     </style>
 </head>
+
 <body>
     <header>
         <div class="logo-section">
-            <div class="logo-icon">🦅</div>
+            <div class="logo-icon"><img src="/static/logo.svg" alt="Logo"></div>
             <h1>EagleEye <span>Face Enrollment</span></h1>
         </div>
         <div class="header-actions">
-            <div class="user-info"><span>👤 {{ username }}</span></div>
+            <div class="user-info">{{ username }}</div>
             <a href="/" class="nav-btn">← Dashboard</a>
         </div>
     </header>
 
-    <!-- Auth Gate -->
     <div class="auth-gate" id="auth-gate">
         <div class="auth-card">
             <div class="lock-icon">🔐</div>
             <h2>Authentication Required</h2>
-            <p>Enrollment is a critical operation. Please re-enter your admin password to continue.</p>
+            <p>Enrollment is a critical operation. Re-enter your admin password to continue.</p>
             <div class="auth-error" id="auth-error"></div>
             <input type="password" id="auth-password" placeholder="Enter admin password" autocomplete="off">
             <button class="submit-btn" id="auth-submit" onclick="verifyAuth()">Verify Identity</button>
         </div>
     </div>
 
-    <!-- Enrollment UI (hidden until auth passes) -->
     <div class="enroll-container" id="enroll-ui">
         <div class="name-bar">
-            <label>👤 Culprit Name:</label>
+            <label>Culprit Name:</label>
             <input type="text" id="culprit-name" placeholder="Enter full name (e.g., John Doe)">
         </div>
 
-        <div class="mode-tabs">
-            <button class="mode-tab active" onclick="switchMode('upload', event)">📁 Upload Photos</button>
-            <button class="mode-tab" onclick="switchMode('camera', event)">📷 Live Camera</button>
+        <div class="name-bar" style="border-top: none; padding-top: 0;">
+            <label>Alert Emails:</label>
+            <input type="text" id="alert-emails" placeholder="Optional: Email1, Email2, Email3 (comma separated)">
         </div>
 
-        <!-- Upload Panel -->
+        <div class="mode-tabs">
+            <button class="mode-tab active" onclick="switchMode('upload', event)">Upload Photos</button>
+            <button class="mode-tab" onclick="switchMode('camera', event)">Live Camera</button>
+        </div>
+
         <div class="panel active" id="panel-upload">
             <div class="upload-panel">
                 <div class="drop-zone" id="drop-zone">
-                    <div class="icon">📤</div>
+                    <div class="icon">↑</div>
                     <p>Drag & drop images here</p>
-                    <small>or click to browse • JPG, PNG supported • Multiple images allowed</small>
+                    <small>or click to browse · JPG, PNG · Multiple images</small>
                     <input type="file" id="file-input" multiple accept="image/*">
                 </div>
                 <div class="preview-grid" id="upload-preview"></div>
             </div>
         </div>
 
-        <!-- Camera Panel -->
         <div class="panel" id="panel-camera">
             <div class="camera-panel">
                 <div class="camera-controls">
                     <button class="cam-btn primary" id="start-cam-btn" onclick="startCamera()">Start Camera</button>
-                    <button class="cam-btn primary" id="capture-btn" onclick="captureFrame()" disabled>📸 Capture</button>
-                    <button class="cam-btn secondary" onclick="stopCamera()">Stop Camera</button>
+                    <button class="cam-btn primary" id="capture-btn" onclick="captureFrame()" disabled>Capture</button>
+                    <button class="cam-btn secondary" onclick="stopCamera()">Stop</button>
                     <span class="capture-count" id="capture-count">0 / 5 captured</span>
                 </div>
                 <div class="camera-feed-container">
@@ -450,13 +708,10 @@
 
         <div class="submit-bar">
             <div class="status" id="submit-status">No images selected</div>
-            <button class="enroll-btn" id="enroll-submit" onclick="submitEnrollment()" disabled>
-                Enroll Face
-            </button>
+            <button class="enroll-btn" id="enroll-submit" onclick="submitEnrollment()" disabled>Enroll Face</button>
         </div>
     </div>
 
-    <!-- Results Modal -->
     <div class="results-overlay" id="results-overlay">
         <div class="results-card">
             <h2>Enrollment Results</h2>
@@ -469,13 +724,11 @@
     <canvas id="hidden-canvas"></canvas>
 
     <script>
-        // ── State ────────────────────────────────────────────────────────
-        let uploadedFiles = [];       // File objects from upload
-        let capturedBlobs = [];       // Blob objects from camera
+        let uploadedFiles = [];
+        let capturedBlobs = [];
         let cameraStream = null;
         let currentMode = 'upload';
 
-        // ── Auth ─────────────────────────────────────────────────────────
         document.getElementById('auth-password').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') verifyAuth();
         });
@@ -484,7 +737,6 @@
             const pw = document.getElementById('auth-password').value;
             const errEl = document.getElementById('auth-error');
             const btn = document.getElementById('auth-submit');
-
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span>Verifying...';
             errEl.style.display = 'none';
@@ -494,27 +746,26 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password: pw })
             })
-            .then(r => r.json().then(d => ({ status: r.status, data: d })))
-            .then(({ status, data }) => {
-                if (data.ok) {
-                    document.getElementById('auth-gate').style.display = 'none';
-                    document.getElementById('enroll-ui').classList.add('active');
-                } else {
-                    errEl.textContent = data.error || 'Authentication failed';
+                .then(r => r.json().then(d => ({ status: r.status, data: d })))
+                .then(({ status, data }) => {
+                    if (data.ok) {
+                        document.getElementById('auth-gate').style.display = 'none';
+                        document.getElementById('enroll-ui').classList.add('active');
+                    } else {
+                        errEl.textContent = data.error || 'Authentication failed';
+                        errEl.style.display = 'block';
+                    }
+                    btn.disabled = false;
+                    btn.textContent = 'Verify Identity';
+                })
+                .catch(() => {
+                    errEl.textContent = 'Network error';
                     errEl.style.display = 'block';
-                }
-                btn.disabled = false;
-                btn.textContent = 'Verify Identity';
-            })
-            .catch(() => {
-                errEl.textContent = 'Network error';
-                errEl.style.display = 'block';
-                btn.disabled = false;
-                btn.textContent = 'Verify Identity';
-            });
+                    btn.disabled = false;
+                    btn.textContent = 'Verify Identity';
+                });
         }
 
-        // ── Tab Switching ────────────────────────────────────────────────
         function switchMode(mode, event) {
             currentMode = mode;
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -524,122 +775,75 @@
             updateStatus();
         }
 
-        // ── Upload Mode ──────────────────────────────────────────────────
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
-
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            addFiles(e.dataTransfer.files);
-        });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); addFiles(e.dataTransfer.files); });
         fileInput.addEventListener('change', () => addFiles(fileInput.files));
 
         function addFiles(files) {
-            for (const f of files) {
-                if (f.type.startsWith('image/')) uploadedFiles.push(f);
-            }
-            renderUploadPreview();
-            updateStatus();
+            for (const f of files) { if (f.type.startsWith('image/')) uploadedFiles.push(f); }
+            renderUploadPreview(); updateStatus();
         }
 
         function renderUploadPreview() {
-            const container = document.getElementById('upload-preview');
-            container.innerHTML = '';
+            const c = document.getElementById('upload-preview'); c.innerHTML = '';
             uploadedFiles.forEach((f, i) => {
-                const div = document.createElement('div');
-                div.className = 'preview-item';
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(f);
-                div.appendChild(img);
-
-                const btn = document.createElement('button');
-                btn.className = 'remove-btn';
-                btn.textContent = '×';
+                const d = document.createElement('div'); d.className = 'preview-item';
+                const img = document.createElement('img'); img.src = URL.createObjectURL(f); d.appendChild(img);
+                const btn = document.createElement('button'); btn.className = 'remove-btn'; btn.textContent = '×';
                 btn.onclick = () => { uploadedFiles.splice(i, 1); renderUploadPreview(); updateStatus(); };
-                div.appendChild(btn);
-                container.appendChild(div);
+                d.appendChild(btn); c.appendChild(d);
             });
         }
 
-        // ── Camera Mode ──────────────────────────────────────────────────
         async function startCamera() {
             try {
                 cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
-                const video = document.getElementById('cam-video');
-                video.srcObject = cameraStream;
-                video.style.display = 'block';
+                const v = document.getElementById('cam-video'); v.srcObject = cameraStream; v.style.display = 'block';
                 document.getElementById('cam-placeholder').style.display = 'none';
                 document.getElementById('capture-btn').disabled = false;
                 document.getElementById('start-cam-btn').disabled = true;
-            } catch (e) {
-                alert('Camera access denied: ' + e.message);
-            }
+            } catch (e) { alert('Camera access denied: ' + e.message); }
         }
 
         function stopCamera() {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(t => t.stop());
-                cameraStream = null;
-            }
-            const video = document.getElementById('cam-video');
-            video.srcObject = null;
-            video.style.display = 'none';
+            if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+            const v = document.getElementById('cam-video'); v.srcObject = null; v.style.display = 'none';
             document.getElementById('cam-placeholder').style.display = '';
             document.getElementById('capture-btn').disabled = true;
             document.getElementById('start-cam-btn').disabled = false;
         }
 
         function captureFrame() {
-            if (capturedBlobs.length >= 5) { alert('Maximum 5 captures reached'); return; }
-
-            const video = document.getElementById('cam-video');
-            const canvas = document.getElementById('hidden-canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-
-            canvas.toBlob(blob => {
-                capturedBlobs.push(blob);
-                renderCameraPreview();
-                updateStatus();
-            }, 'image/jpeg', 0.95);
+            if (capturedBlobs.length >= 5) { alert('Maximum 5 captures'); return; }
+            const v = document.getElementById('cam-video');
+            const c = document.getElementById('hidden-canvas');
+            c.width = v.videoWidth; c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            c.toBlob(blob => { capturedBlobs.push(blob); renderCameraPreview(); updateStatus(); }, 'image/jpeg', 0.95);
         }
 
         function renderCameraPreview() {
-            const container = document.getElementById('cam-preview');
-            container.innerHTML = '';
+            const c = document.getElementById('cam-preview'); c.innerHTML = '';
             capturedBlobs.forEach((b, i) => {
-                const div = document.createElement('div');
-                div.className = 'preview-item';
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(b);
-                div.appendChild(img);
-
-                const btn = document.createElement('button');
-                btn.className = 'remove-btn';
-                btn.textContent = '×';
+                const d = document.createElement('div'); d.className = 'preview-item';
+                const img = document.createElement('img'); img.src = URL.createObjectURL(b); d.appendChild(img);
+                const btn = document.createElement('button'); btn.className = 'remove-btn'; btn.textContent = '×';
                 btn.onclick = () => { capturedBlobs.splice(i, 1); renderCameraPreview(); updateStatus(); };
-                div.appendChild(btn);
-                container.appendChild(div);
+                d.appendChild(btn); c.appendChild(d);
             });
             document.getElementById('capture-count').textContent = `${capturedBlobs.length} / 5 captured`;
         }
 
-        // ── Status & Submit ──────────────────────────────────────────────
         function updateStatus() {
             const count = currentMode === 'upload' ? uploadedFiles.length : capturedBlobs.length;
-            const statusEl = document.getElementById('submit-status');
+            const s = document.getElementById('submit-status');
             const btn = document.getElementById('enroll-submit');
             const name = document.getElementById('culprit-name').value.trim();
-
-            statusEl.textContent = count === 0
-                ? 'No images selected'
-                : `${count} image${count > 1 ? 's' : ''} ready`;
-
+            s.textContent = count === 0 ? 'No images selected' : `${count} image${count > 1 ? 's' : ''} ready`;
             btn.disabled = count === 0 || !name;
         }
 
@@ -647,70 +851,37 @@
 
         function submitEnrollment() {
             const name = document.getElementById('culprit-name').value.trim();
+            const emails = document.getElementById('alert-emails').value.trim();
             if (!name) { alert('Please enter a name'); return; }
-
-            const formData = new FormData();
-            formData.append('name', name);
-
-            if (currentMode === 'upload') {
-                uploadedFiles.forEach(f => formData.append('images', f));
-            } else {
-                capturedBlobs.forEach((b, i) => formData.append('images', b, `capture_${i+1}.jpg`));
-            }
-
+            const fd = new FormData(); 
+            fd.append('name', name);
+            if (emails) fd.append('alert_emails', emails);
+            if (currentMode === 'upload') { uploadedFiles.forEach(f => fd.append('images', f)); }
+            else { capturedBlobs.forEach((b, i) => fd.append('images', b, `capture_${i + 1}.jpg`)); }
             const btn = document.getElementById('enroll-submit');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span>Processing...';
-
-            fetch('/api/enroll/submit', { method: 'POST', body: formData })
-                .then(r => r.json())
-                .then(data => {
-                    showResults(data);
-                    btn.disabled = false;
-                    btn.textContent = 'Enroll Face';
-                })
-                .catch(e => {
-                    alert('Error: ' + e.message);
-                    btn.disabled = false;
-                    btn.textContent = 'Enroll Face';
-                });
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Processing...';
+            fetch('/api/enroll/submit', { method: 'POST', body: fd })
+                .then(r => r.json()).then(data => { showResults(data); btn.disabled = false; btn.textContent = 'Enroll Face'; })
+                .catch(e => { alert('Error: ' + e.message); btn.disabled = false; btn.textContent = 'Enroll Face'; });
         }
 
         function showResults(data) {
             document.getElementById('results-overlay').classList.add('show');
-
-            const summaryEl = document.getElementById('results-summary');
-            summaryEl.innerHTML = `
+            document.getElementById('results-summary').innerHTML = `
                 <div class="big-number">${data.enrolled}</div>
-                <div class="label">of ${data.total_submitted} face${data.total_submitted > 1 ? 's' : ''} enrolled successfully</div>
-            `;
-
-            const listEl = document.getElementById('results-list');
-            listEl.innerHTML = '';
+                <div class="label">of ${data.total_submitted} face${data.total_submitted > 1 ? 's' : ''} enrolled</div>`;
+            const l = document.getElementById('results-list'); l.innerHTML = '';
             (data.details || []).forEach(d => {
                 const div = document.createElement('div');
                 div.className = `result-item ${d.ok ? 'success' : 'failed'}`;
-                div.innerHTML = `
-                    <span class="icon">${d.ok ? '✅' : '❌'}</span>
-                    <span class="filename">${d.file}</span>
-                    ${d.error ? `<span class="error-msg">${d.error}</span>` : ''}
-                `;
-                listEl.appendChild(div);
+                div.innerHTML = `<span class="icon">${d.ok ? '✓' : '✗'}</span><span class="filename">${d.file}</span>${d.error ? `<span class="error-msg">${d.error}</span>` : ''}`;
+                l.appendChild(div);
             });
-
-            // Clear state after successful enrollment
-            if (data.enrolled > 0) {
-                uploadedFiles = [];
-                capturedBlobs = [];
-                renderUploadPreview();
-                renderCameraPreview();
-                updateStatus();
-            }
+            if (data.enrolled > 0) { uploadedFiles = []; capturedBlobs = []; renderUploadPreview(); renderCameraPreview(); updateStatus(); }
         }
 
-        function closeResults() {
-            document.getElementById('results-overlay').classList.remove('show');
-        }
+        function closeResults() { document.getElementById('results-overlay').classList.remove('show'); }
     </script>
 </body>
+
 </html>

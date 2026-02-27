@@ -13,4 +13,4 @@ python-dotenv>=1.0.0
 pyinstaller
 mediapipe===0.10.13
 pyserial
-pynmea2
+pynmea2reportlab

@@ -68,11 +68,21 @@ class VectorDB:
         Args:
             identities: List of dicts, each containing 'vector' (List[float]) and other metadata.
         """
-        # Convert all to list for JSON serialization
+        # Convert all to list for JSON serialization and explicitly L2 normalize
         for item in identities:
             for k, v in item.items():
                 if isinstance(v, np.ndarray):
+                    # If it's the main embedding vector, L2 normalize it for IP search
+                    if k == 'vector':
+                        norm = np.linalg.norm(v)
+                        if norm > 0:
+                            v = v / norm
                     item[k] = v.tolist()
+                elif k == 'vector' and isinstance(v, list):
+                    v_arr = np.array(v)
+                    norm = np.linalg.norm(v_arr)
+                    if norm > 0:
+                        item[k] = (v_arr / norm).tolist()
         
         self.data.extend(identities)
         self._save()
@@ -98,12 +108,12 @@ class VectorDB:
         # Vectorized approach:
         vectors = np.array([item['vector'] for item in self.data])
         
-        # Normalize DB vectors (in case they weren't on insert)
+        # Already normalized on insert, but just in case
         norms = np.linalg.norm(vectors, axis=1)
         norms[norms == 0] = 1e-10
         vectors_norm = vectors / norms[:, np.newaxis]
         
-        # Dot product (Cosine Similarity)
+        # Inner Product (IP) search on normalized vectors
         scores = np.dot(vectors_norm, query_vector)
         
         # k-NN Logic: Get top K candidates
@@ -158,8 +168,9 @@ class VectorDB:
                 "id": winner['id'],
                 "name": best_name,
                 "score": final_score,
-                "landmark_3d_68": winner['record'].get('landmark_3d_68'), # Return stored 68-point 3D mesh
-                "landmark_3d_468": winner['record'].get('landmark_3d_468') # Return stored 468-point 3D mesh
+                "landmark_3d_68": winner['record'].get('landmark_3d_68'), 
+                "landmark_3d_468": winner['record'].get('landmark_3d_468'),
+                "alert_emails": winner['record'].get('alert_emails')
             })
             
         return matches

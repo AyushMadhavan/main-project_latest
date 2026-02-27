@@ -1,20 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - EagleEye Surveillance</title>
+    <title>Login — EagleEye</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -23,194 +18,138 @@
         }
 
         .login-container {
-            background: rgba(30, 41, 59, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 12px;
             padding: 40px;
             width: 100%;
-            max-width: 420px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
+            max-width: 400px;
         }
 
         .logo {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 32px;
+        }
+
+        .logo img {
+            width: 48px; height: 48px;
+            filter: invert(1);
+            margin-bottom: 12px;
         }
 
         .logo h1 {
-            color: #e2e8f0;
-            font-size: 2rem;
-            font-weight: 300;
-            letter-spacing: 1px;
-        }
-
-        .logo span {
-            color: #3b82f6;
-            font-weight: 600;
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 500;
+            letter-spacing: -0.5px;
         }
 
         .subtitle {
             text-align: center;
-            color: #94a3b8;
-            font-size: 0.9rem;
-            margin-bottom: 30px;
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 28px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
+        .form-group { margin-bottom: 18px; }
 
         label {
             display: block;
-            color: #cbd5e1;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
+            color: #999;
+            font-size: 0.8rem;
+            margin-bottom: 6px;
             font-weight: 500;
-        }
-
-        .input-wrapper {
-            position: relative;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #64748b;
-            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 14px 15px 14px 45px;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: #e2e8f0;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            padding: 12px 14px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
         }
 
-        input[type="text"]:focus,
-        input[type="password"]:focus {
+        input:focus {
             outline: none;
-            border-color: #3b82f6;
-            background: rgba(15, 23, 42, 0.8);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            border-color: #555;
         }
 
         .remember-forgot {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            margin-bottom: 24px;
         }
 
         .remember-me {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .remember-me input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 16px; height: 16px;
+            accent-color: #fff;
             cursor: pointer;
         }
 
         .remember-me label {
             margin: 0;
-            font-size: 0.85rem;
-            color: #94a3b8;
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: none;
+            letter-spacing: 0;
             cursor: pointer;
-        }
-
-        .forgot-password {
-            color: #3b82f6;
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: color 0.2s;
-        }
-
-        .forgot-password:hover {
-            color: #60a5fa;
         }
 
         .login-btn {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            padding: 12px;
+            background: #fff;
             border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
+            border-radius: 6px;
+            color: #000;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            transition: opacity 0.2s;
         }
 
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-        }
-
-        .login-btn:active {
-            transform: translateY(0);
-        }
+        .login-btn:hover { opacity: 0.85; }
+        .login-btn:active { opacity: 0.7; }
 
         .error-message {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 8px;
-            padding: 12px;
-            color: #fca5a5;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: #ccc;
+            font-size: 0.85rem;
+            margin-bottom: 18px;
             display: none;
         }
 
-        .error-message.show {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+        .error-message.show { display: block; }
 
         .footer {
             text-align: center;
-            margin-top: 25px;
-            color: #64748b;
-            font-size: 0.85rem;
-        }
-
-        /* Icons using Unicode */
-        .icon-user::before {
-            content: "👤";
-        }
-
-        .icon-lock::before {
-            content: "🔒";
+            margin-top: 24px;
+            color: #333;
+            font-size: 0.75rem;
         }
     </style>
 </head>
-
 <body>
     <div class="login-container">
         <div class="logo">
-            <h1>EagleEye <span>Surveillance</span></h1>
+            <img src="/static/logo.svg" alt="Logo">
+            <h1>EagleEye</h1>
         </div>
         <div class="subtitle">Secure Access Portal</div>
 
@@ -221,18 +160,12 @@
         <form method="POST" action="/login" onsubmit="return validateForm()">
             <div class="form-group">
                 <label for="username">Username</label>
-                <div class="input-wrapper">
-                    <span class="input-icon icon-user"></span>
-                    <input type="text" id="username" name="username" placeholder="Enter your username" required>
-                </div>
+                <input type="text" id="username" name="username" placeholder="Enter username" required>
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <div class="input-wrapper">
-                    <span class="input-icon icon-lock"></span>
-                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
-                </div>
+                <input type="password" id="password" name="password" placeholder="Enter password" required>
             </div>
 
             <div class="remember-forgot">
@@ -240,37 +173,30 @@
                     <input type="checkbox" id="remember" name="remember">
                     <label for="remember">Remember me</label>
                 </div>
-                <a href="#" class="forgot-password">Forgot password?</a>
             </div>
 
             <button type="submit" class="login-btn">Sign In</button>
         </form>
 
-        <div class="footer">
-            © 2026 EagleEye Surveillance System
-        </div>
+        <div class="footer">© 2026 EagleEye Surveillance System</div>
     </div>
 
     <script>
-        // Show error message if login failed
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('error') === '1') {
             document.getElementById('error-message').classList.add('show');
         }
 
         function validateForm() {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-
-            if (!username || !password) {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value;
+            if (!u || !p) {
                 document.getElementById('error-message').textContent = 'Please fill in all fields';
                 document.getElementById('error-message').classList.add('show');
                 return false;
             }
-
             return true;
         }
     </script>
 </body>
-
 </html>

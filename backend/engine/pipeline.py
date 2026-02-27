@@ -15,6 +15,7 @@ from insightface.app import FaceAnalysis
 
 from backend.engine.location import get_live_location
 from backend.engine.forensics import save_forensics
+from backend.engine.alerts import AlertManager
 from backend.database.vector_db import VectorDB
 from backend.ingestion.stream_loader import StreamLoader
 from backend.recognition.tracker import IOUTracker
@@ -70,7 +71,7 @@ def main():
                 cam['gps'] = detected_gps
 
     # 1. Dashboard
-    start_dashboard(config=config.get('system', {}), port=5000)
+    start_dashboard(config=config.get('system', {}), port=5050)
 
     # 2. Database
     db = VectorDB(
@@ -101,6 +102,9 @@ def main():
     # Share model and DB with enrollment routes
     set_face_app(face_app)
     set_vector_db(db)
+
+    # 3b. Alert Manager
+    alert_manager = AlertManager(config.get('alerts', {}))
 
     # 4. Streams & Trackers
     cameras_config = config.get('cameras', [])
@@ -139,14 +143,34 @@ def main():
     start_time = time.time()
     captures_dir = os.path.join("frontend", "static", "captures")
 
+    import mediapipe as mp
+    mp_face_mesh = mp.solutions.face_mesh.FaceMesh(
+        static_image_mode=False,
+        max_num_faces=10,
+        refine_landmarks=True,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5
+    )
+
     # Pre-fill grid buffer with black frames
     grid_buffer = {}
     last_frame_time = {}
+    
+    # State caching for frame skipping optimization
+    frame_counters = {}
+    last_faces = {}
+    last_mp_results = {}
+    last_tracked_objects = {}
+
     for cid in streams:
         blank = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(blank, "Initializing...", (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         grid_buffer[cid] = blank
         last_frame_time[cid] = time.time()
+        frame_counters[cid] = 0
+        last_faces[cid] = []
+        last_mp_results[cid] = None
+        last_tracked_objects[cid] = []
 
     try:
         while True:
@@ -168,12 +192,32 @@ def main():
                 any_new_frame = True
                 last_frame_time[cid] = time.time()
 
-                # Detection
-                try:
-                    faces = face_app.get(frame)
-                except Exception as e:
-                    logger.error(f"Detection error: {e}")
-                    faces = []
+                # Downscale immediately to greatly increase FPS for CPU ML processing
+                frame = cv2.resize(frame, (640, 480))
+                
+                frame_counters[cid] += 1
+                PROCESS_INTERVAL = 3  # Only run ML every 3rd frame
+
+                # Run heavy ML detection conditionally
+                if frame_counters[cid] % PROCESS_INTERVAL == 0:
+                    try:
+                        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        mp_results = mp_face_mesh.process(rgb_frame)
+                        faces = face_app.get(frame)
+                        
+                        # Cache the results
+                        last_faces[cid] = faces
+                        last_mp_results[cid] = mp_results
+                    except Exception as e:
+                        logger.error(f"Detection error: {e}")
+                        faces = []
+                        last_faces[cid] = []
+                        mp_results = None
+                        last_mp_results[cid] = None
+                else:
+                    # Reuse cached ML results
+                    faces = last_faces[cid]
+                    mp_results = last_mp_results[cid]
 
                 # Prepare detections for tracker
                 detections = []
@@ -183,9 +227,15 @@ def main():
                     detections.append([bbox[0], bbox[1], bbox[2], bbox[3]])
                     face_map[i] = face
 
-                # Update tracker
+                # Update tracker conditionally or use cache
                 tracker_data = trackers[cid]
-                tracked_objects = tracker_data['tracker'].update(detections)
+                if frame_counters[cid] % PROCESS_INTERVAL == 0:
+                    tracked_objects = tracker_data['tracker'].update(detections)
+                    last_tracked_objects[cid] = tracked_objects
+                else:
+                    tracked_objects = last_tracked_objects[cid]
+
+                identified_bboxes = []
 
                 for track_id, bbox in tracked_objects:
                     # Match tracked box to face
@@ -203,21 +253,25 @@ def main():
                     local_identities = tracker_data['identities']
                     matches = []
 
-                    if track_id in local_identities and local_identities[track_id]['score'] > 0.6:
-                        name = local_identities[track_id]['name']
-                        score = local_identities[track_id]['score']
-                    else:
-                        matches = db.search_embedding(
-                            matched_face.embedding,
-                            threshold=config['recognition']['similarity_threshold']
-                        )
-                        if matches:
-                            name = matches[0]['name']
-                            score = matches[0]['score']
-                            local_identities[track_id] = {'name': name, 'score': score}
+                    # Only run DB search and forensics on PROCESSING frames
+                    if frame_counters[cid] % PROCESS_INTERVAL == 0:
+                        if track_id in local_identities and local_identities[track_id]['score'] > 0.6:
+                            # Re-verify high confidence match occasionally? No, keep it if exists
+                            name = local_identities[track_id]['name']
+                            score = local_identities[track_id]['score']
+                        else:
+                            matches = db.search_embedding(
+                                matched_face.embedding,
+                                threshold=config['recognition']['similarity_threshold']
+                            )
+                            if matches:
+                                name = matches[0]['name']
+                                score = matches[0]['score']
+                                alert_emails = matches[0].get('alert_emails')
+                                local_identities[track_id] = {'name': name, 'score': score, 'alert_emails': alert_emails}
 
-                        if track_id not in local_identities:
-                            local_identities[track_id] = {'name': name, 'score': score}
+                            if track_id not in local_identities:
+                                local_identities[track_id] = {'name': name, 'score': score}
 
                         # Forensics (once per track)
                         capture_paths = {}
@@ -230,7 +284,13 @@ def main():
                                 local_identities[track_id]['forensics_saved'] = True
                             except Exception as e:
                                 logger.error(f"Forensics capture failed: {e}")
+                    else:
+                        # On skipped frames, just use the known identity from the tracker
+                        if track_id in local_identities:
+                            name = local_identities[track_id]['name']
+                            score = local_identities[track_id].get('score', 0.0)
 
+                    if frame_counters[cid] % PROCESS_INTERVAL == 0:
                         if not capture_paths and 'captures' in local_identities.get(track_id, {}):
                             capture_paths = local_identities[track_id]['captures']
 
@@ -249,6 +309,17 @@ def main():
                                         captures=capture_paths)
                             local_identities[track_id]['last_log'] = time.time()
 
+                            # Email alert for high-confidence detections
+                            orig_capture = capture_paths.get('original', '')
+                            custom_emails = local_identities[track_id].get('alert_emails')
+                            alert_manager.check_and_alert(
+                                name, score,
+                                location=cam_conf.get('name', cid),
+                                gps=cam_conf.get('gps'),
+                                capture_path=orig_capture,
+                                custom_emails=custom_emails
+                            )
+
                             # Send to HQ
                             hq_url = config.get('system', {}).get('central_server')
                             if hq_url:
@@ -265,17 +336,36 @@ def main():
                                 executor.submit(send_to_hq, hq_url, payload)
 
                     # Visualization
-                    color = (0, 255, 0) if name != config['recognition']['unknown_label'] else (0, 0, 255)
-                    cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
-                    cv2.putText(frame, f"{name} ({score:.2f})", (bbox[0], bbox[1] - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    if name != config['recognition']['unknown_label']:
+                        identified_bboxes.append(bbox)
+                        color = (0, 255, 0)
+                        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
+                        cv2.putText(frame, f"{name} ({score:.2f})", (bbox[0], bbox[1] - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-                    if hasattr(matched_face, 'landmark_3d_68') and matched_face.landmark_3d_68 is not None:
-                        for pt in matched_face.landmark_3d_68.astype(int):
-                            cv2.circle(frame, (pt[0], pt[1]), 1, (0, 255, 255), -1)
+                # Draw MediaPipe 468-point Mesh ONLY for identified faces
+                if mp_results and mp_results.multi_face_landmarks:
+                    h, w, _ = frame.shape
+                    for face_landmarks in mp_results.multi_face_landmarks:
+                        if not face_landmarks.landmark: continue
+                        
+                        # Check if mesh belongs to an identified face
+                        lm0 = face_landmarks.landmark[0]
+                        cx, cy = int(lm0.x * w), int(lm0.y * h)
+                        is_identified = False
+                        for ibox in identified_bboxes:
+                            if ibox[0] <= cx <= ibox[2] and ibox[1] <= cy <= ibox[3]:
+                                is_identified = True
+                                break
+                                
+                        if not is_identified:
+                            continue
+                            
+                        for lm in face_landmarks.landmark:
+                            x, y = int(lm.x * w), int(lm.y * h)
+                            cv2.circle(frame, (x, y), 1, (0, 255, 255), -1)
 
-                cv2.putText(frame, cam_conf['name'], (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                grid_buffer[cid] = cv2.resize(frame, (640, 480))
+                grid_buffer[cid] = frame
 
             # Stitch frames for dashboard
             if not any_new_frame:
